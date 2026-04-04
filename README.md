@@ -81,7 +81,7 @@ Quality Assessment Tools (with commands)
 
 ---
 
-Frontend Implementation (Streamlit)
+### Frontend Implementation (Streamlit)
 
 The frontend is implemented in:
 
@@ -91,7 +91,7 @@ The frontend is implemented in:
 - `frontend/src/models.py` - typed models and status inference logic
 - `frontend/src/ui.py` - UI rendering and custom styling
 
-Quick Start
+Quick Start (Frontend)
 
 1. Install dependencies:
 
@@ -121,3 +121,60 @@ Frontend Features
 Test command for frontend logic:
 
 pytest frontend/tests/
+
+---
+
+### Backend Implementation (FastAPI)
+
+The backend is implemented in:
+
+* `src/main.py` – FastAPI application entry point
+* `src/schemas.py` – Pydantic models for request/response validation
+* `src/models.py` – SQLAlchemy models
+* `src/crud.py` – Database access and report logic
+* `src/database.py` – Session and SQLite connection
+
+Quick Start (Backend)
+
+1. Create virtual environment:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate  # Linux/macOS
+venv\Scripts\activate     # Windows
+```
+
+2. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+3. Run backend:
+
+```bash
+uvicorn src.main:app --reload
+```
+
+---
+
+## Testing
+
+Run all tests with:
+
+```bash
+pytest
+```
+
+For coverage report:
+
+```bash
+pytest --cov=src --cov-report=term-missing
+```
+
+For security report:
+
+```bash
+> cd backend
+backend> bandit ./src/
+```

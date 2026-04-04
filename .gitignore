@@ -27,3 +27,8 @@ htmlcov/
 
 # macOS
 .DS_Store
+
+# DB
+*.db
+
+
