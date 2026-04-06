@@ -1,0 +1,51 @@
+name: Release Gate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-readiness:
+    name: Release readiness checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install backend dependencies + QA tools
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 bandit radon
+
+      - name: Backend gates
+        working-directory: backend
+        run: |
+          flake8 src tests
+          bandit -r src -ll
+          python ../scripts/check_complexity.py --path src --max-complexity 8
+          pytest --cov=src --cov-report=term-missing --cov-fail-under=70
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Frontend smoke tests
+        working-directory: frontend
+        run: pytest tests
+
+      - name: Release note
+        run: |
+          echo "All automated release gates are green."
+          echo "Manual check still required: verify critical UX (report + status view)."
