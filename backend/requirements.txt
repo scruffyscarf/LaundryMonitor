@@ -3,5 +3,6 @@ uvicorn[standard]
 sqlalchemy
 pydantic
 requests
+httpx
 pytest
 pytest-cov
