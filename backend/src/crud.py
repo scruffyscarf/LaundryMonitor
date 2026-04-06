@@ -7,36 +7,60 @@ from math import ceil
 from . import models, schemas
 
 
+def _normalize_timestamp(report: models.Report) -> datetime:
+    ts = report.timestamp
+    if ts.tzinfo is None:
+        return ts.replace(tzinfo=timezone.utc)
+    return ts
+
+
+def _busy_with_known_time(
+    now: datetime,
+    ts: datetime,
+    report: models.Report,
+) -> Tuple[str, int | None] | None:
+    if report.status.lower() != "busy" or report.time_remaining is None:
+        return None
+
+    end_time = ts + timedelta(minutes=report.time_remaining)
+
+    if now < end_time:
+        remaining = (end_time - now).total_seconds() / 60
+        return "Busy", ceil(remaining)
+    return "Free", 0
+
+
+def _busy_without_time(
+    now: datetime,
+    ts: datetime,
+    report: models.Report,
+) -> Tuple[str, int | None] | None:
+    if report.status.lower() != "busy" or report.time_remaining is not None:
+        return None
+
+    if now < ts + timedelta(hours=4):
+        return "Busy", None
+    return "Probably_Free", None
+
+
 def infer_status(report: models.Report) -> Tuple[str, int | None]:
     if not report:
         return "Free", None
 
     now = datetime.now(timezone.utc)
-    ts = report.timestamp
-
-    if ts.tzinfo is None:
-        ts = ts.replace(tzinfo=timezone.utc)
+    ts = _normalize_timestamp(report)
 
     # 1. Unavailable
     if report.status.lower() == "unavailable":
         return "Unavailable", None
 
-    # 2. Busy + known time
-    if report.status.lower() == "busy" and report.time_remaining is not None:
-        end_time = ts + timedelta(minutes=report.time_remaining)
+    known_time_result = _busy_with_known_time(now, ts, report)
+    if known_time_result is not None:
+        return known_time_result
 
-        if now < end_time:
-            remaining = (end_time - now).total_seconds() / 60
-            return "Busy", ceil(remaining)
-        else:
-            return "Free", 0
-
-    # 3. Busy without time
-    if report.status.lower() == "busy" and report.time_remaining is None:
-        if now < ts + timedelta(hours=4):
-            return "Busy", None
-        else:
-            return "Probably_Free", None
+    unknown_time_result = _busy_without_time(now, ts, report)
+    if unknown_time_result is not None:
+        return unknown_time_result
 
     # 4. Free
     if report.status.lower() == "free":
