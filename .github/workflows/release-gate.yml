@@ -43,6 +43,8 @@ jobs:
 
       - name: Frontend smoke tests
         working-directory: frontend
+        env:
+          PYTHONPATH: ..
         run: pytest tests
 
       - name: Release note
