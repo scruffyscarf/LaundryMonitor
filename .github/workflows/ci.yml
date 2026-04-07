@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main, dev]
+
+permissions:
+  contents: read
+
+jobs:
+  backend-quality:
+    name: Backend quality gates
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 bandit radon
+
+      - name: Style gate (flake8)
+        run: flake8 src tests
+
+      - name: Security gate (bandit, high severity)
+        run: bandit -r src -ll
+
+      - name: Complexity gate (radon cc < 8)
+        run: python ../scripts/check_complexity.py --path src --max-complexity 8
+
+      - name: Tests + coverage gate
+        run: pytest --cov=src --cov-report=term-missing --cov-fail-under=70
+
+      - name: Maintainability report (non-blocking)
+        run: radon mi src -s
+        continue-on-error: true
+
+  frontend-tests:
+    name: Frontend unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      PYTHONPATH: ..
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: |
+            frontend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run tests
+        run: pytest tests
