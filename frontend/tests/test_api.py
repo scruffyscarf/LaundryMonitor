@@ -30,7 +30,8 @@ def test_get_machines_success(monkeypatch):
         }
     ]
 
-    def _fake_get(*_args, **_kwargs):
+    def _fake_get(url, **_kwargs):
+        assert "/machines/" in url
         return _FakeResponse(payload)
 
     monkeypatch.setattr(api.requests, "get", _fake_get)

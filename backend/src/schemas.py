@@ -1,5 +1,15 @@
 from typing import Optional
-from pydantic import BaseModel
+
+from pydantic import BaseModel, Field
+
+
+class LoginRequest(BaseModel):
+    password: str = Field(min_length=1)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
 
 
 class Report(BaseModel):
@@ -13,6 +23,16 @@ class Machine(BaseModel):
     id: int
     name: str
     type: str
+
+
+class MachineCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    type: str = Field(min_length=1, max_length=50)
+
+
+class MachineUpdate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    type: str = Field(min_length=1, max_length=50)
 
 
 class MachineResponse(Machine):

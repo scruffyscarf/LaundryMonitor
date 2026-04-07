@@ -19,7 +19,16 @@ class _FakeSidebar:
     def header(self, *_args, **_kwargs):
         pass
 
-    def selectbox(self, _label, options):
+    def divider(self):
+        pass
+
+    def caption(self, *_args, **_kwargs):
+        pass
+
+    def expander(self, *_label, **_kwargs):
+        return _DummyCtx()
+
+    def selectbox(self, _label, options, **_kwargs):
         return options[0] if options else ""
 
     def radio(self, _label, options, format_func=None):
@@ -75,6 +84,14 @@ class _FakeStreamlit:
 def test_main_runs_and_submits_report(monkeypatch):
     fake_st = _FakeStreamlit()
     monkeypatch.setattr(app, "st", fake_st)
+    monkeypatch.setattr(app.admin_cookies, "flush_pending_storage_writes", lambda: None)
+    monkeypatch.setattr(
+        app.admin_cookies,
+        "restore_admin_token_from_cookie",
+        lambda *a, **k: None,
+    )
+    monkeypatch.setattr(app.admin_cookies, "save_admin_token_cookie", lambda *a, **k: None)
+    monkeypatch.setattr(app.admin_cookies, "clear_admin_token_cookie", lambda *a, **k: None)
 
     machines = [
         Machine(

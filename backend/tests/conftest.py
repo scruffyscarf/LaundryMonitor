@@ -1,3 +1,8 @@
+import os
+
+# Skip app lifespan touching the real DB file during tests (see src.main lifespan).
+os.environ.setdefault("TESTING", "1")
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -7,7 +12,7 @@ from src.main import app
 from src.database import Base, get_db
 from src import models
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+SQLALCHEMY_DATABASE_URL = "sqlite:///./data/test.db"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL,
                        connect_args={"check_same_thread": False})

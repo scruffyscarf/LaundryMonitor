@@ -1,10 +1,20 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timezone, timedelta
 from typing import List, Tuple
 from math import ceil
 
 from . import models, schemas
+
+
+def _normalize_machine_type(raw: str) -> str:
+    t = (raw or "").strip().lower()
+    if t in ("wash", "w"):
+        return "Wash"
+    if t in ("dry", "d"):
+        return "Dry"
+    raise ValueError("type must be wash or dry")
 
 
 def _normalize_timestamp(report: models.Report) -> datetime:
@@ -112,7 +122,6 @@ def create_report(db: Session, report: schemas.Report):
         reporter=report.reporter
     )
 
-    print(vars(db_report))
     db.add(db_report)
     db.commit()
     db.refresh(db_report)
@@ -126,3 +135,38 @@ def get_report_history(db: Session, machine_id: int):
         .filter(models.Report.machine_id == machine_id)\
         .order_by(models.Report.timestamp.desc())\
         .limit(10).all()
+
+
+def create_machine(db: Session, payload: schemas.MachineCreate) -> models.Machine:
+    mtype = _normalize_machine_type(payload.type)
+    db_machine = models.Machine(name=payload.name.strip(), type=mtype)
+    db.add(db_machine)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise
+    db.refresh(db_machine)
+    return db_machine
+
+
+def update_machine(
+    db: Session,
+    machine_id: int,
+    payload: schemas.MachineUpdate,
+) -> models.Machine | None:
+    db_machine = (
+        db.query(models.Machine).filter(models.Machine.id == machine_id).first()
+    )
+    if not db_machine:
+        return None
+    mtype = _normalize_machine_type(payload.type)
+    db_machine.name = payload.name.strip()
+    db_machine.type = mtype
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise
+    db.refresh(db_machine)
+    return db_machine
