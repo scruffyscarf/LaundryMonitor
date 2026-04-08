@@ -5,16 +5,18 @@ import os
 from contextlib import asynccontextmanager
 from typing import List
 
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import crud, models, schemas
-from .auth import create_access_token, get_current_admin
+from .auth import create_access_token, get_current_admin, check_token_alive, REVOKED_TOKENS
 from .database import Base, SessionLocal, engine, get_db
 
 DEV = os.getenv("DEV", "false").lower() in ("1", "true", "yes")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+security = HTTPBearer()
 
 
 def _seed_dev_data(db: Session) -> None:
@@ -95,6 +97,19 @@ def admin_login(body: schemas.LoginRequest):
     if body.password != ADMIN_PASSWORD:
         raise HTTPException(status_code=401, detail="Invalid password")
     return schemas.TokenResponse(access_token=create_access_token())
+
+
+@app.get("/auth/logout", response_model=schemas.LogoutResponse)
+def admin_login(credentials: HTTPAuthorizationCredentials = Depends(security),):
+    token = credentials.credentials
+    REVOKED_TOKENS.add(token)
+    return schemas.LogoutResponse(message="Logged out")
+
+
+@app.get("/auth/verify", response_model=schemas.TokenAliveResponse)
+def admin_verify(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    return schemas.TokenAliveResponse(alive=check_token_alive(token))
 
 
 @app.get("/machines/", response_model=List[schemas.MachineResponse])

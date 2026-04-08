@@ -1,5 +1,6 @@
 import os
 import time
+import requests
 from datetime import UTC, datetime
 
 import jwt
@@ -9,6 +10,7 @@ from . import admin_cookies, api, ui
 
 REFRESH_SECONDS = int(os.getenv("REFRESH_SECONDS", "30"))
 _ADMIN_JWT_ALG = "HS256"
+BACKEND_URL = os.getenv('BACKEND_API_URL')
 
 
 def _remaining_seconds(token: str | None) -> int | None:
@@ -40,14 +42,23 @@ def _token_still_valid(token: str | None) -> bool:
     """True if token parses and is not expired. Signature is checked by the API, not here."""
     if not token:
         return False
+    
     try:
-        jwt.decode(
-            token,
-            algorithms=[_ADMIN_JWT_ALG],
-            options={"verify_signature": False, "verify_exp": True},
+        response = requests.get(
+            f"{BACKEND_URL}/auth/verify",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=5
         )
-        return True
-    except jwt.InvalidTokenError:
+        
+        if response.json()['alive'] == True:
+            print("normik")
+            return True
+        else:
+            print("Токен сдох")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"aliБэк не отвечает: {e}")
         return False
 
 
@@ -205,6 +216,7 @@ def main():
         if st.sidebar.button("Sign out"):
             st.session_state["admin_token"] = None
             admin_cookies.clear_admin_token_cookie()
+            api.admin_logout(token)
             _safe_rerun()
             return
 

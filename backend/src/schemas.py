@@ -7,9 +7,16 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1)
 
 
+class LogoutResponse(BaseModel):
+    message: str = "poka poka"
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class TokenAliveResponse(BaseModel):
+    alive: bool
 
 
 class Report(BaseModel):

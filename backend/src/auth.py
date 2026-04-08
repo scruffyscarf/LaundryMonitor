@@ -7,7 +7,9 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 ADMIN_JWT_SECRET = os.getenv("ADMIN_JWT_SECRET", "change-me-in-production")
 ADMIN_JWT_ALGORITHM = "HS256"
-ADMIN_TOKEN_TTL = timedelta(seconds=5)
+ADMIN_TOKEN_TTL = timedelta(hours=1)
+REVOKED_TOKENS = set()
+
 
 bearer_scheme = HTTPBearer(auto_error=True)
 
@@ -24,6 +26,18 @@ def create_access_token() -> str:
         ADMIN_JWT_SECRET,
         algorithm=ADMIN_JWT_ALGORITHM,
     )    
+
+
+def check_token_alive(token: str) -> bool:
+    try:
+        jwt.decode(
+            token,
+            algorithms=[ADMIN_JWT_ALGORITHM],
+            options={"verify_signature": False, "verify_exp": True},
+        )
+        return token not in REVOKED_TOKENS
+    except jwt.InvalidTokenError:
+        return False
 
 
 def get_current_admin(

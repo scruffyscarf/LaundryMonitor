@@ -158,6 +158,17 @@ def login_admin(password: str) -> dict:
     return r.json()
 
 
+def admin_logout(token) -> dict:
+    print("sperma'")
+    r = requests.get(
+        f"{BASE}/auth/logout",
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=5,
+    )
+    r.raise_for_status()
+    return r.json()
+
+
 def add_machine(name: str, machine_type: str, token: str) -> dict:
     r = requests.post(
         f"{BASE}/machines/",
