@@ -3,20 +3,17 @@ from sqlalchemy import func
 from datetime import datetime, timezone, timedelta
 from typing import List, Tuple
 from math import ceil
+from fastapi import HTTPException, status
 
 from . import models, schemas
 
+MAX_TIME_REMAINING = 300  # 5 hours in minutes
 
-def infer_status(report: models.Report) -> Tuple[str, int | None]:
-    if not report:
-        return "Free", None
 
-    now = datetime.now(timezone.utc)
-    ts = report.timestamp
-
-    if ts.tzinfo is None:
-        ts = ts.replace(tzinfo=timezone.utc)
-
+def result_unavailable_or_busy(
+        report: models.Report,
+        now: datetime,
+        ts: datetime) -> Tuple[str, int | None]:
     # 1. Unavailable
     if report.status.lower() == "unavailable":
         return "Unavailable", None
@@ -31,6 +28,11 @@ def infer_status(report: models.Report) -> Tuple[str, int | None]:
         else:
             return "Free", 0
 
+
+def result_busy_or_probably_free(
+        report: models.Report,
+        now: datetime,
+        ts: datetime) -> Tuple[str, int | None]:
     # 3. Busy without time
     if report.status.lower() == "busy" and report.time_remaining is None:
         if now < ts + timedelta(hours=4):
@@ -41,6 +43,25 @@ def infer_status(report: models.Report) -> Tuple[str, int | None]:
     # 4. Free
     if report.status.lower() == "free":
         return "Free", None
+
+
+def infer_status(report: models.Report) -> Tuple[str, int | None]:
+    if not report:
+        return "Free", None
+
+    now = datetime.now(timezone.utc)
+    ts = report.timestamp
+
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+
+    result = result_unavailable_or_busy(report, now, ts)
+    if result is not None:
+        return result
+
+    result = result_busy_or_probably_free(report, now, ts)
+    if result is not None:
+        return result
 
     return "Free", None
 
@@ -88,7 +109,13 @@ def create_report(db: Session, report: schemas.Report):
         reporter=report.reporter
     )
 
-    print(vars(db_report))
+    if (report.time_remaining is
+            not None) and (report.time_remaining > MAX_TIME_REMAINING):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"time_remaining cannot exceed {MAX_TIME_REMAINING} minutes"
+        )
+
     db.add(db_report)
     db.commit()
     db.refresh(db_report)

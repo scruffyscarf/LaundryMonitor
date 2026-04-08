@@ -8,8 +8,9 @@ from typing import List
 
 from . import schemas, crud, models
 from .database import get_db
+from .database import Base, engine
 
-app = FastAPI(title="LaundryMonitor Backend")
+Base.metadata.create_all(bind=engine)
 
 
 @asynccontextmanager
@@ -41,6 +42,10 @@ async def lifespan(app):
         db.add_all(machines)
         db.add_all(reports)
         db.commit()
+    yield
+
+
+app = FastAPI(title="LaundryMonitor Backend", lifespan=lifespan)
 
 
 @app.get("/machines/", response_model=List[schemas.MachineResponse])

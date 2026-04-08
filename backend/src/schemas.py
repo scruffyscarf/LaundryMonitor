@@ -1,11 +1,11 @@
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Report(BaseModel):
-    machine_id: int
+    machine_id: int = Field(gt=0)
     status: str
-    time_remaining: Optional[int] = None
+    time_remaining: Optional[int] = Field(default=None, ge=0)
     reporter: Optional[str] = None
 
 
