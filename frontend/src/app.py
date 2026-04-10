@@ -103,15 +103,18 @@ def main():
         format_func=lambda s: s.title(),
     )
     time_remaining = st.sidebar.number_input(
-        "Time remaining (minutes)",
+        "Time remaining (min)",
         min_value=0,
         value=0,
+        help="Maximum - 240 min",
     )
     reporter = st.sidebar.text_input("Reporter (optional)")
 
     if st.sidebar.button("Submit"):
         if not machine_options:
             st.sidebar.error("No machines available to report on.")
+        elif time_remaining > 240:
+            st.sidebar.error("Time remaining exceeds the 4-hour limit (240 minutes).")
         else:
             mid = machine_options[machine_name]
             tr = int(time_remaining) if time_remaining > 0 else None
