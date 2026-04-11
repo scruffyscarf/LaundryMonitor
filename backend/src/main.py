@@ -18,6 +18,7 @@ DEV = os.getenv("DEV", "false").lower() in ("1", "true", "yes")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 security = HTTPBearer()
 
+Base.metadata.create_all(bind=engine)
 
 def _seed_dev_data(db: Session) -> None:
     now = datetime.datetime.now(datetime.timezone.utc)
@@ -81,7 +82,7 @@ async def lifespan(app: FastAPI):
 
     db = SessionLocal()
     try:
-        if DEV and db.query(models.Machine).count() == 0:
+        if db.query(models.Machine).count() == 0:
             _seed_dev_data(db)
     finally:
         db.close()
