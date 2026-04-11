@@ -27,7 +27,7 @@ class Report(Base):
     machine_id = Column(Integer, ForeignKey("machines.id"), nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
     status = Column(String, nullable=False)
-    time_remaining = Column(Integer, nullable=True)
+    time_remaining = Column(Integer, nullable=False)
 
     reporter = Column(String, nullable=True)
     machine = relationship("Machine", back_populates="reports")

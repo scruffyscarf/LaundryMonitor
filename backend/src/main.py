@@ -16,6 +16,7 @@ from .database import Base, SessionLocal, engine, get_db
 
 DEV = os.getenv("DEV", "false").lower() in ("1", "true", "yes")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+MAX_TIME = int(os.getenv("LAUNDRY_MAX_MINUTES", 300))
 security = HTTPBearer()
 
 Base.metadata.create_all(bind=engine)
@@ -183,7 +184,21 @@ def post_report(report: schemas.Report, db: Session = Depends(get_db)):
         time_remaining(int, nullable)
     }
     """
-    return crud.create_report(db, report)
+    # Validate data
+
+    print(report)
+    if report.time_remaining is not None:
+        if not isinstance(report.time_remaining, int):
+            raise HTTPException(status_code=403, detail="Time should be a valid integer")
+        elif report.time_remaining <= 0:
+            raise HTTPException(status_code=403, detail="Time cannot be leq 0")
+        elif report.time_remaining > MAX_TIME:
+            raise HTTPException(status_code=403, detail="Time cannot exceed 300 minutes")
+        
+        # On success
+        return crud.create_report(db, report)
+    
+    raise HTTPException(status_code=403, detail="Specify time")
 
 
 @app.get("/machines/{machine_id}/history", response_model=List[schemas.Report])

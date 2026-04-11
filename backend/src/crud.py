@@ -1,3 +1,4 @@
+import os
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -7,6 +8,7 @@ from math import ceil
 
 from . import models, schemas
 
+MAX_MINUTES = int(os.getenv("LAUNDRY_MAX_MINUTES", 300))
 
 def _normalize_machine_type(raw: str) -> str:
     t = (raw or "").strip().lower()
@@ -30,9 +32,13 @@ def _busy_with_known_time(
     report: models.Report,
 ) -> Tuple[str, int | None] | None:
     if report.status.lower() != "busy" or report.time_remaining is None:
-        return None
+        return None 
+    
+    time_raw = report.time_remaining
 
-    end_time = ts + timedelta(minutes=report.time_remaining)
+    # Fix overflow
+    time_sanitized = min(report.time_remaining, MAX_MINUTES)
+    end_time = ts + timedelta(minutes=time_sanitized)
 
     if now < end_time:
         remaining = (end_time - now).total_seconds() / 60
@@ -113,7 +119,7 @@ def get_all_machines(db: Session) -> List[schemas.MachineResponse]:
 
 
 def create_report(db: Session, report: schemas.Report):
-
+    print(report)
     db_report = models.Report(
         machine_id=report.machine_id,
         timestamp=datetime.now(timezone.utc),

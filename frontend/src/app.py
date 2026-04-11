@@ -228,15 +228,21 @@ def main():
             st.sidebar.error("No machines available to report on.")
         else:
             mid = machine_options[machine_name]
-            tr = int(time_remaining) if status == "busy" and time_remaining > 0 else None
+            tr = int(time_remaining) if status == "busy" else None
             try:
-                api.post_report(
+                resp_body, resp_code = api.post_report(
                     mid,
                     status,
                     time_remaining=tr,
                     reporter=reporter or None,
                 )
-                st.sidebar.success("Report submitted")
+
+                # Print error
+                if resp_code != 200:
+                    st.sidebar.error(resp_body['detail'])
+                else:
+                    st.sidebar.success("Report submitted")
+
                 # Clear cache to force refresh
                 st.session_state["machines_cache"] = None
                 time.sleep(0.5)

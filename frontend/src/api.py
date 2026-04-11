@@ -143,10 +143,9 @@ def post_report(
     try:
         r = requests.post(f"{BASE}/report/", json=payload, timeout=5)
         r.raise_for_status()
-        return r.json()
+        return (r.json(), r.status_code)
     except Exception:
-        return {"mock": True, "machine_id": machine_id, "status": status}
-
+        return (r.json(), r.status_code)
 
 def login_admin(password: str) -> dict:
     r = requests.post(
