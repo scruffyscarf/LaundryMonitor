@@ -50,16 +50,36 @@ def _token_still_valid(token: str | None) -> bool:
             timeout=5
         )
         
-        if response.json()['alive'] == True:
-            print("normik")
+        if response.json().get('alive') == True:
             return True
         else:
-            print("Токен сдох")
             return False
             
     except requests.exceptions.RequestException as e:
-        print(f"aliБэк не отвечает: {e}")
+        print(f"Backend unreachable: {e}")
         return False
+
+
+def deduplicate_machines(machines):
+    """Remove duplicate machines from the list"""
+    seen_ids = set()
+    seen_names = set()
+    unique_machines = []
+    
+    for m in machines:
+        # Try to use machine ID if available
+        if hasattr(m, 'id') and m.id is not None:
+            if m.id not in seen_ids:
+                seen_ids.add(m.id)
+                unique_machines.append(m)
+        else:
+            # Fall back to name + type combination
+            key = f"{m.name}_{m.type}".lower()
+            if key not in seen_names:
+                seen_names.add(key)
+                unique_machines.append(m)
+    
+    return unique_machines
 
 
 def main():
@@ -67,6 +87,12 @@ def main():
 
     if "admin_token" not in st.session_state:
         st.session_state["admin_token"] = None
+    
+    # Initialize session state for machines cache
+    if "machines_cache" not in st.session_state:
+        st.session_state["machines_cache"] = None
+    if "last_update" not in st.session_state:
+        st.session_state["last_update"] = 0
 
     admin_cookies.flush_pending_storage_writes()
     admin_cookies.restore_admin_token_from_cookie(_token_still_valid)
@@ -87,11 +113,30 @@ def main():
                 value=True,
             )
 
-    try:
-        machines, mocked = api.get_machines()
-    except Exception as e:
-        st.error(f"Failed to fetch machines: {e}")
-        machines, mocked = [], False
+    # Fetch machines only if needed
+    current_time = time.time()
+    should_refresh = (
+        refresh_btn or 
+        st.session_state["machines_cache"] is None or
+        (auto_refresh and current_time - st.session_state["last_update"] >= REFRESH_SECONDS)
+    )
+    
+    if should_refresh:
+        try:
+            machines, mocked = api.get_machines()
+            # Remove duplicates BEFORE any processing
+            machines = deduplicate_machines(machines)
+            st.session_state["machines_cache"] = machines
+            st.session_state["last_update"] = current_time
+            st.session_state["mocked"] = mocked
+        except Exception as e:
+            st.error(f"Failed to fetch machines: {e}")
+            if st.session_state["machines_cache"] is None:
+                st.session_state["machines_cache"] = []
+            st.session_state["mocked"] = False
+    else:
+        machines = st.session_state["machines_cache"]
+        mocked = st.session_state.get("mocked", False)
 
     if mocked:
         err = api.get_last_backend_error() or "unknown error"
@@ -141,11 +186,16 @@ def main():
         )
     ]
 
-    # Grid of cards (3 columns)
-    cols = st.columns(3)
-    for i, m in enumerate(filtered):
-        with cols[i % 3]:
-            ui.card(m)
+    # Clear and recreate grid of cards - use empty container approach
+    # Create a placeholder for the machines grid
+    machines_container = st.container()
+    
+    with machines_container:
+        # Create columns for the grid
+        cols = st.columns(3)
+        for i, m in enumerate(filtered):
+            with cols[i % 3]:
+                ui.card(m)
 
     # Sidebar: report form
     st.sidebar.header("Submit Report")
@@ -154,25 +204,31 @@ def main():
     machine_name = st.sidebar.selectbox(
         "Machine *",
         options=list(machine_options.keys()) if machine_options else [],
+        key="machine_select"
     )
     status = st.sidebar.radio(
         "Status *",
         options=["free", "busy", "unavailable"],
         format_func=lambda s: s.title(),
+        key="status_radio"
     )
-    time_remaining = st.sidebar.number_input(
-        "Time remaining (minutes)",
-        min_value=0,
-        value=0,
-    )
-    reporter = st.sidebar.text_input("Reporter (optional)")
+    
+    time_remaining = 0
+    if status == "busy":
+        time_remaining = st.sidebar.number_input(
+            "Time remaining (minutes)",
+            min_value=0,
+            value=0,
+            key="time_remaining"
+        )
+    reporter = st.sidebar.text_input("Reporter (optional)", key="reporter_input")
 
-    if st.sidebar.button("Submit"):
+    if st.sidebar.button("Submit", key="submit_report"):
         if not machine_options:
             st.sidebar.error("No machines available to report on.")
         else:
             mid = machine_options[machine_name]
-            tr = int(time_remaining) if time_remaining > 0 else None
+            tr = int(time_remaining) if status == "busy" and time_remaining > 0 else None
             try:
                 api.post_report(
                     mid,
@@ -181,6 +237,11 @@ def main():
                     reporter=reporter or None,
                 )
                 st.sidebar.success("Report submitted")
+                # Clear cache to force refresh
+                st.session_state["machines_cache"] = None
+                time.sleep(0.5)
+                _safe_rerun()
+                return
             except Exception as e:
                 st.sidebar.error(f"Failed to submit report: {e}")
 
@@ -201,7 +262,7 @@ def main():
             type="password",
             key="admin_password_input",
         )
-        if st.sidebar.button("Sign in"):
+        if st.sidebar.button("Sign in", key="sign_in"):
             try:
                 data = api.login_admin(admin_pw)
                 tok = data.get("access_token")
@@ -213,7 +274,7 @@ def main():
             except Exception:
                 st.sidebar.error("Invalid password or backend unreachable.")
     else:
-        if st.sidebar.button("Sign out"):
+        if st.sidebar.button("Sign out", key="sign_out"):
             st.session_state["admin_token"] = None
             admin_cookies.clear_admin_token_cookie()
             api.admin_logout(token)
@@ -226,7 +287,8 @@ def main():
                 f"Admin session expires in {rem // 60} min {rem % 60} s."
             )
 
-        with st.sidebar.expander("Add machine", expanded=False):
+        # Add machine section
+        with st.sidebar.expander("➕ Add machine", expanded=False):
             with st.form("add_machine_form", clear_on_submit=True):
                 new_name = st.text_input("Machine name")
                 new_type = st.selectbox("Machine type", options=["Wash", "Dry"])
@@ -242,12 +304,14 @@ def main():
                                 token,
                             )
                             st.success("Machine added")
+                            st.session_state["machines_cache"] = None  # Clear cache
                             _safe_rerun()
                             return
                         except Exception as e:
                             st.error(f"Failed to add machine: {e}")
 
-        with st.sidebar.expander("Edit machine", expanded=False):
+        # Edit machine section - only ONE instance
+        with st.sidebar.expander("✏️ Edit machine", expanded=False):
             edit_options = {f"{m.id} - {m.name}": m for m in machines}
             if not edit_options:
                 st.info("No machines available.")
@@ -262,6 +326,7 @@ def main():
                     edit_name = st.text_input(
                         "Machine name",
                         value=selected_machine.name,
+                        key="edit_name"
                     )
                     edit_type = st.selectbox(
                         "Machine type",
@@ -269,8 +334,9 @@ def main():
                         index=0
                         if selected_machine.type.lower().startswith("wash")
                         else 1,
+                        key="edit_type"
                     )
-                    edit_submit = st.form_submit_button("Save changes")
+                    edit_submit = st.form_submit_button("💾 Save changes")
                     if edit_submit:
                         if not edit_name.strip():
                             st.error("Machine name is required.")
@@ -283,20 +349,8 @@ def main():
                                     token,
                                 )
                                 st.success("Machine updated")
+                                st.session_state["machines_cache"] = None  # Clear cache
                                 _safe_rerun()
                                 return
                             except Exception as e:
                                 st.error(f"Failed to update machine: {e}")
-
-    # Handle refresh / auto-refresh
-    filter_state = (tuple(types), tuple(statuses))
-    prev_state = st.session_state.get("filter_state")
-    st.session_state["filter_state"] = filter_state
-
-    if refresh_btn:
-        _safe_rerun()
-        return
-
-    if auto_refresh and prev_state == filter_state:
-        time.sleep(REFRESH_SECONDS)
-        _safe_rerun()
