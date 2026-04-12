@@ -50,4 +50,4 @@ jobs:
       - name: Maintainability Index
         run: |
           cd backend
-          radon mi src/ -s
+          radon mi src/
