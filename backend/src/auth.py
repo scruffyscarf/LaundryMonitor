@@ -5,7 +5,7 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-ADMIN_JWT_SECRET = os.getenv("ADMIN_JWT_SECRET", "change-me-in-production")
+ADMIN_JWT_SECRET = os.getenv("ADMIN_JWT_SECRET", "change-me-in-production-32-bytes-key!!")
 ADMIN_JWT_ALGORITHM = "HS256"
 ADMIN_TOKEN_TTL = timedelta(hours=1)
 REVOKED_TOKENS = set()
@@ -25,7 +25,7 @@ def create_access_token() -> str:
         payload,
         ADMIN_JWT_SECRET,
         algorithm=ADMIN_JWT_ALGORITHM,
-    )    
+    )
 
 
 def check_token_alive(token: str) -> bool:

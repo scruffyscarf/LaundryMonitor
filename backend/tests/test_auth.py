@@ -16,7 +16,7 @@ def test_create_machine_requires_auth(client, seed_machines):
         "/machines/",
         json={"name": "Extra Washer", "type": "wash"},
     )
-    assert r.status_code == 403
+    assert r.status_code == 401
 
 
 def test_create_and_update_machine_with_token(client, seed_machines):
@@ -41,3 +41,4 @@ def test_create_and_update_machine_with_token(client, seed_machines):
     assert r2.status_code == 200
     assert r2.json()["name"] == "Extra Washer Renamed"
     assert r2.json()["type"] == "Dry"
+

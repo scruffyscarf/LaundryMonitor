@@ -1,16 +1,14 @@
 import os
-
-# Skip app lifespan touching the real DB file during tests (see src.main lifespan).
-os.environ.setdefault("TESTING", "1")
-
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
-
 from src.main import app
 from src.database import Base, get_db
 from src import models
+
+# Skip app lifespan touching the real DB file during tests (see src.main lifespan).
+os.environ.setdefault("TESTING", "1")
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./data/test.db"
 

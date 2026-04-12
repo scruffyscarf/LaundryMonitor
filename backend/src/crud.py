@@ -10,6 +10,7 @@ from . import models, schemas
 
 MAX_MINUTES = int(os.getenv("LAUNDRY_MAX_MINUTES", 300))
 
+
 def _normalize_machine_type(raw: str) -> str:
     t = (raw or "").strip().lower()
     if t in ("wash", "w"):
@@ -32,9 +33,7 @@ def _busy_with_known_time(
     report: models.Report,
 ) -> Tuple[str, int | None] | None:
     if report.status.lower() != "busy" or report.time_remaining is None:
-        return None 
-    
-    time_raw = report.time_remaining
+        return None
 
     # Fix overflow
     time_sanitized = min(report.time_remaining, MAX_MINUTES)

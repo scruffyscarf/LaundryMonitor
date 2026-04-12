@@ -10,6 +10,7 @@ class LoginRequest(BaseModel):
 class LogoutResponse(BaseModel):
     message: str = "poka poka"
 
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

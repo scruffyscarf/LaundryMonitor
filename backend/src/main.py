@@ -21,6 +21,7 @@ security = HTTPBearer()
 
 Base.metadata.create_all(bind=engine)
 
+
 def _seed_dev_data(db: Session) -> None:
     now = datetime.datetime.now(datetime.timezone.utc)
     machines = [
@@ -102,7 +103,7 @@ def admin_login(body: schemas.LoginRequest):
 
 
 @app.get("/auth/logout", response_model=schemas.LogoutResponse)
-def admin_login(credentials: HTTPAuthorizationCredentials = Depends(security),):
+def admin_logout(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
     REVOKED_TOKENS.add(token)
     return schemas.LogoutResponse(message="Logged out")
@@ -185,8 +186,8 @@ def post_report(report: schemas.Report, db: Session = Depends(get_db)):
     }
     """
     # Validate data
-
     print(report)
+    
     if report.time_remaining is not None:
         if not isinstance(report.time_remaining, int):
             raise HTTPException(status_code=403, detail="Time should be a valid integer")
@@ -194,11 +195,8 @@ def post_report(report: schemas.Report, db: Session = Depends(get_db)):
             raise HTTPException(status_code=403, detail="Time cannot be leq 0")
         elif report.time_remaining > MAX_TIME:
             raise HTTPException(status_code=403, detail="Time cannot exceed 300 minutes")
-        
-        # On success
-        return crud.create_report(db, report)
     
-    raise HTTPException(status_code=403, detail="Specify time")
+    return crud.create_report(db, report)
 
 
 @app.get("/machines/{machine_id}/history", response_model=List[schemas.Report])
