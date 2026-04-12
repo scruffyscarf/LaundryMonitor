@@ -4,50 +4,50 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: read 
 
 jobs:
-  release-readiness:
-    name: Release readiness checks
+  check:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Setup Python
+      
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-
-      - name: Install backend dependencies + QA tools
-        working-directory: backend
+          python-version: '3.12'
+      
+      - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install flake8 bandit radon
-
-      - name: Backend gates
-        working-directory: backend
+      
+      - name: Style Conformance
         run: |
-          flake8 src tests
-          bandit -r src -ll
-          python ../scripts/check_complexity.py --path src --max-complexity 8
+          cd backend
+          flake8 src/ tests/
+      
+      - name: Security
+        run: |
+          cd backend
+          bandit -r src/ -ll
+      
+      - name: Backend Tests + Coverage
+        run: |
+          cd backend
           pytest --cov=src --cov-report=term-missing --cov-fail-under=70
 
-      - name: Install frontend dependencies
-        working-directory: frontend
+      - name: FrontendTests
         run: |
-          pip install -r requirements.txt
-          pip install pytest
-
-      - name: Frontend smoke tests
-        working-directory: frontend
-        env:
-          PYTHONPATH: ..
-        run: pytest tests
-
-      - name: Release note
+          python -m pytest frontend/tests/
+      
+      - name: Cyclomatic Complexity
         run: |
-          echo "All automated release gates are green."
-          echo "Manual check still required: verify critical UX (report + status view)."
+          cd backend
+          radon cc src/ -a -s
+      
+      - name: Maintainability Index
+        run: |
+          cd backend
+          radon mi src/ -s

@@ -42,3 +42,22 @@ def test_create_and_update_machine_with_token(client, seed_machines):
     assert r2.json()["name"] == "Extra Washer Renamed"
     assert r2.json()["type"] == "Dry"
 
+
+def test_logout_revokes_token(client):
+    login_r = client.post("/auth/login", json={"password": "admin123"})
+    token = login_r.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    verify_r = client.get("/auth/verify", headers=headers)
+    assert verify_r.json()["alive"] is True
+
+    logout_r = client.get("/auth/logout", headers=headers)
+    assert logout_r.status_code == 200
+
+    verify_r2 = client.get("/auth/verify", headers=headers)
+    assert verify_r2.json()["alive"] is False
+
+
+def test_verify_without_token(client):
+    r = client.get("/auth/verify")
+    assert r.status_code == 401

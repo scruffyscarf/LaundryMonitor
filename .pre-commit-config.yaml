@@ -1,9 +1,9 @@
 repos:
-  - repo: https://github.com/pycqa/flake8
+  - repo: https://github.com/PyCQA/flake8
     rev: 7.1.1
     hooks:
       - id: flake8
-        name: flake8 (backend + frontend)
+        name: flake8
         args: ["backend/src", "backend/tests", "frontend/src", "frontend/tests"]
         pass_filenames: false
 
@@ -11,6 +11,6 @@ repos:
     rev: 1.8.3
     hooks:
       - id: bandit
-        name: bandit (backend high severity)
+        name: bandit
         args: ["-r", "backend/src", "-ll"]
         pass_filenames: false

@@ -1,15 +1,11 @@
-# src/main.py
 import datetime
 import os
-
 from contextlib import asynccontextmanager
 from typing import List
-
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-
 from . import crud, models, schemas
 from .auth import create_access_token, get_current_admin, check_token_alive, REVOKED_TOKENS
 from .database import Base, SessionLocal, engine, get_db
@@ -75,7 +71,6 @@ def _seed_dev_data(db: Session) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Pytest sets TESTING=1 in conftest so we do not touch ./data/laundry.db.
     if os.getenv("TESTING") == "1":
         yield
         return
@@ -117,17 +112,6 @@ def admin_verify(credentials: HTTPAuthorizationCredentials = Depends(security)):
 
 @app.get("/machines/", response_model=List[schemas.MachineResponse])
 def read_machines(db: Session = Depends(get_db)):
-    """
-    GET list of all machines
-    {
-        [
-            (id, name, type(wash/dry)),
-            (id, name, type(wash/dry)),
-            ...
-            (id, name, type(wash/dry)),
-        ]
-    }
-    """
     return crud.get_all_machines(db)
 
 
@@ -174,20 +158,8 @@ def update_machine(
 
 @app.post("/report/", response_model=schemas.Report)
 def post_report(report: schemas.Report, db: Session = Depends(get_db)):
-    """
-    GET a report about a machine's status.
-    The report includes
-    {
-        id,
-        machine_id,
-        timestamp,
-        status(free/busy/unavailable),
-        time_remaining(int, nullable)
-    }
-    """
-    # Validate data
     print(report)
-    
+
     if report.time_remaining is not None:
         if not isinstance(report.time_remaining, int):
             raise HTTPException(status_code=403, detail="Time should be a valid integer")
@@ -195,23 +167,12 @@ def post_report(report: schemas.Report, db: Session = Depends(get_db)):
             raise HTTPException(status_code=403, detail="Time cannot be leq 0")
         elif report.time_remaining > MAX_TIME:
             raise HTTPException(status_code=403, detail="Time cannot exceed 300 minutes")
-    
+
     return crud.create_report(db, report)
 
 
 @app.get("/machines/{machine_id}/history", response_model=List[schemas.Report])
 def get_history(machine_id: int, db: Session = Depends(get_db)):
-    """
-    Return last few reports for a machine by its ID (optional, for debugging).
-
-    Path parameter:
-    - machine_id: int
-
-    Response:
-    -   List of reports for this machine,
-        ordered by timestamp descending,
-        limited to 10
-    """
     reports = crud.get_report_history(db, machine_id)
     if not reports:
         raise HTTPException(status_code=404,

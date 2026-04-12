@@ -42,19 +42,19 @@ def _token_still_valid(token: str | None) -> bool:
     """True if token parses and is not expired. Signature is checked by the API, not here."""
     if not token:
         return False
-    
+
     try:
         response = requests.get(
             f"{BACKEND_URL}/auth/verify",
             headers={"Authorization": f"Bearer {token}"},
             timeout=5
         )
-        
-        if response.json().get('alive') == True:
+
+        if response.json().get('alive') is True:
             return True
         else:
             return False
-            
+
     except requests.exceptions.RequestException as e:
         print(f"Backend unreachable: {e}")
         return False
@@ -65,7 +65,7 @@ def deduplicate_machines(machines):
     seen_ids = set()
     seen_names = set()
     unique_machines = []
-    
+
     for m in machines:
         # Try to use machine ID if available
         if hasattr(m, 'id') and m.id is not None:
@@ -78,7 +78,7 @@ def deduplicate_machines(machines):
             if key not in seen_names:
                 seen_names.add(key)
                 unique_machines.append(m)
-    
+
     return unique_machines
 
 
@@ -87,7 +87,7 @@ def main():
 
     if "admin_token" not in st.session_state:
         st.session_state["admin_token"] = None
-    
+
     # Initialize session state for machines cache
     if "machines_cache" not in st.session_state:
         st.session_state["machines_cache"] = None
@@ -116,11 +116,11 @@ def main():
     # Fetch machines only if needed
     current_time = time.time()
     should_refresh = (
-        refresh_btn or 
+        refresh_btn or
         st.session_state["machines_cache"] is None or
         (auto_refresh and current_time - st.session_state["last_update"] >= REFRESH_SECONDS)
     )
-    
+
     if should_refresh:
         try:
             machines, mocked = api.get_machines()
@@ -189,7 +189,7 @@ def main():
     # Clear and recreate grid of cards - use empty container approach
     # Create a placeholder for the machines grid
     machines_container = st.container()
-    
+
     with machines_container:
         # Create columns for the grid
         cols = st.columns(3)
@@ -212,7 +212,7 @@ def main():
         format_func=lambda s: s.title(),
         key="status_radio"
     )
-    
+
     time_remaining = 0
     if status == "busy":
         time_remaining = st.sidebar.number_input(

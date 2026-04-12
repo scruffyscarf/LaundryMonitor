@@ -13,7 +13,6 @@ def _load_dotenv() -> None:
         from dotenv import load_dotenv
     except ImportError:
         return
-    # Repo root, then frontend/ (later overrides)
     here = Path(__file__).resolve()
     candidates = [
         here.parents[2] / ".env",
@@ -143,9 +142,10 @@ def post_report(
     try:
         r = requests.post(f"{BASE}/report/", json=payload, timeout=5)
         r.raise_for_status()
-        return (r.json(), r.status_code)
-    except Exception:
-        return (r.json(), r.status_code)
+        return r.json(), r.status_code
+    except Exception as e:
+        return {"mock": True, "machine_id": machine_id, "status": status, "error": str(e)}, 500
+
 
 def login_admin(password: str) -> dict:
     r = requests.post(

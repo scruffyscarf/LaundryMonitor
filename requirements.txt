@@ -8,7 +8,8 @@ pytest-cov
 flake8
 radon
 bandit
-poetry
+locust
+pre-commit
 python-dotenv>=1.0
 requests>=2.28
 SQLAlchemy==2.0.49

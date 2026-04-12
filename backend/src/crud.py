@@ -5,7 +5,6 @@ from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timezone, timedelta
 from typing import List, Tuple
 from math import ceil
-
 from . import models, schemas
 
 MAX_MINUTES = int(os.getenv("LAUNDRY_MAX_MINUTES", 300))
@@ -35,7 +34,6 @@ def _busy_with_known_time(
     if report.status.lower() != "busy" or report.time_remaining is None:
         return None
 
-    # Fix overflow
     time_sanitized = min(report.time_remaining, MAX_MINUTES)
     end_time = ts + timedelta(minutes=time_sanitized)
 
@@ -65,7 +63,6 @@ def infer_status(report: models.Report) -> Tuple[str, int | None]:
     now = datetime.now(timezone.utc)
     ts = _normalize_timestamp(report)
 
-    # 1. Unavailable
     if report.status.lower() == "unavailable":
         return "Unavailable", None
 
@@ -77,7 +74,6 @@ def infer_status(report: models.Report) -> Tuple[str, int | None]:
     if unknown_time_result is not None:
         return unknown_time_result
 
-    # 4. Free
     if report.status.lower() == "free":
         return "Free", None
 

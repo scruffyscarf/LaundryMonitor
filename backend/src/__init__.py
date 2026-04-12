@@ -1,1 +1,0 @@
-# LaundryMonitor backend package
