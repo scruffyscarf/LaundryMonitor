@@ -30,7 +30,8 @@ def test_get_machines_success(monkeypatch):
         }
     ]
 
-    def _fake_get(*_args, **_kwargs):
+    def _fake_get(url, **_kwargs):
+        assert "/machines/" in url
         return _FakeResponse(payload)
 
     monkeypatch.setattr(api.requests, "get", _fake_get)
@@ -55,12 +56,15 @@ def test_get_machines_fallback_to_mock(monkeypatch):
 
 def test_post_report_success(monkeypatch):
     def _fake_post(*_args, **_kwargs):
-        return _FakeResponse({"ok": True})
+        fake_resp = _FakeResponse({"ok": True})
+        fake_resp.status_code = 200
+        return fake_resp
 
     monkeypatch.setattr(api.requests, "post", _fake_post)
 
-    res = api.post_report(1, "free", time_remaining=None, reporter=None)
-    assert res == {"ok": True}
+    res_body, res_code = api.post_report(1, "free", time_remaining=None, reporter=None)
+    assert res_body == {"ok": True}
+    assert res_code == 200
 
 
 def test_post_report_fallback(monkeypatch):
@@ -69,6 +73,7 @@ def test_post_report_fallback(monkeypatch):
 
     monkeypatch.setattr(api.requests, "post", _fake_post)
 
-    res = api.post_report(2, "busy", time_remaining=10, reporter="a")
-    assert res["mock"] is True
-    assert res["machine_id"] == 2
+    res_body, res_code = api.post_report(2, "busy", time_remaining=10, reporter="a")
+    assert res_body["mock"] is True
+    assert res_body["machine_id"] == 2
+    assert res_code == 500
