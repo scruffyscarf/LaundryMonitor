@@ -1,0 +1,53 @@
+name: Release Gate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read 
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Style Conformance
+        run: |
+          cd backend
+          flake8 src/ tests/
+      
+      - name: Security
+        run: |
+          cd backend
+          bandit -r src/ -ll
+      
+      - name: Backend Tests + Coverage
+        run: |
+          cd backend
+          pytest --cov=src --cov-report=term-missing --cov-fail-under=70
+
+      - name: FrontendTests
+        run: |
+          python -m pytest frontend/tests/
+      
+      - name: Cyclomatic Complexity
+        run: |
+          cd backend
+          radon cc src/ -a -s
+      
+      - name: Maintainability Index
+        run: |
+          cd backend
+          radon mi src/
