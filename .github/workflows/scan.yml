@@ -1,0 +1,83 @@
+name: Container Security Scan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        load: true
+        tags: laundry-monitor:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Scan with Trivy
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: laundry-monitor:latest
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH'
+        ignore-unfixed: false
+    
+    - name: Upload Trivy results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: trivy-results.sarif
+        category: trivy
+    
+    - name: Install Syft and Grype
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+        curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+    
+    - name: Generate SBOM with Syft
+      run: |
+        syft laundry-monitor:latest -o spdx-json > sbom.spdx.json
+    
+    - name: Scan with Grype
+      run: |
+        grype sbom.spdx.json -o json > grype-results.json
+        grype sbom.spdx.json
+    
+    - name: Upload Grype results as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: grype-scan-results
+        path: grype-results.json
+    
+    - name: Scan with Docker Scout
+      uses: docker/scout-action@v1
+      with:
+        command: cves
+        image: laundry-monitor:latest
+        only-severities: critical,high
+        sarif-file: scout-results.sarif
+    
+    - name: Upload Docker Scout results
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: scout-results.sarif
+        category: docker-scout
+    
+    - name: Upload SBOM artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: sbom-spdx
+        path: sbom.spdx.json
