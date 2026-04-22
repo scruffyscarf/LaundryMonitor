@@ -1,5 +1,11 @@
 name: Container Security Scan
 
+permissions:
+  contents: read
+  security-events: write
+  actions: write
+  packages: read
+
 on:
   push:
 #     branches: [ main ]
@@ -7,7 +13,7 @@ on:
 #     branches: [ main ]
 
 jobs:
-  build-and-scan:
+  scan:
     runs-on: ubuntu-latest
     
     steps:
