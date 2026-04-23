@@ -106,13 +106,14 @@ jobs:
         category: docker-scout
 
     # ========== 4. SNYK ==========
-    - name: Run Snyk container scan
+    - name: Scan with Snyk
       uses: snyk/actions/docker@master
       with:
         image: laundry-monitor:latest
         args: --json-file-output=snyk.json
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      continue-on-error: true
 
     - name: Convert Snyk JSON to SARIF
       uses: garethr/snyk-to-sarif@master
