@@ -73,13 +73,13 @@ jobs:
       run: |
         grype sbom.spdx.json -o sarif > grype.sarif
     
-    - name: Upload Grype SARIF artifact
+    - name: Upload Syft+Grype SARIF artifact
       uses: actions/upload-artifact@v4
       with:
         name: grype-scan-results
         path: grype.sarif
 
-    - name: Upload to GitHub Security Tab
+    - name: Upload Syft+Grype results to GitHub Security Tab
       uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: grype.sarif
@@ -99,7 +99,7 @@ jobs:
         name: scout-results
         path: scout.sarif
     
-    - name: Upload Docker Scout to Security Tab
+    - name: Upload Docker Scout results to Security Tab
       uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: scout.sarif
@@ -110,10 +110,14 @@ jobs:
       uses: snyk/actions/docker@master
       with:
         image: laundry-monitor:latest
-        args: --sarif-file-output=snyk.sarif
+        args: --sarif-file-output=snyk.raw.sarif
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       continue-on-error: true
+
+    - name: Fix Snyk SARIF
+      run: |
+        sed 's/"security-severity": null/"security-severity": 0.0/g' snyk.raw.sarif > snyk.sarif
 
     - name: Upload Snyk SARIF artifact
       uses: actions/upload-artifact@v4
@@ -121,7 +125,7 @@ jobs:
         name: snyk-results
         path: snyk.sarif
 
-    - name: Upload Snyk to GitHub Security Tab
+    - name: Upload Snyk results to GitHub Security Tab
       uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: snyk.sarif
