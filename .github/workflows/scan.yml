@@ -13,7 +13,7 @@ on:
 #     branches: [ main ]
 
 jobs:
-  Scan:
+  scan:
     runs-on: ubuntu-latest
     
     steps:
@@ -47,17 +47,17 @@ jobs:
         output: 'trivy.sarif'
         ignore-unfixed: false
  
-    - name: Upload Trivy SARIF artifact
+    - name: Upload Trivy artifact
       uses: actions/upload-artifact@v4
       with:
-        name: trivy-results
+        name: Trivy Results
         path: trivy.sarif
 
     - name: Upload Trivy results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: trivy.sarif
-        category: trivy
+        category: Trivy
     
     # ========== 2. SYFT + GRYPE ==========
     - name: Install Syft and Grype
@@ -73,17 +73,17 @@ jobs:
       run: |
         grype sbom.spdx.json -o sarif > grype.sarif
     
-    - name: Upload Syft+Grype SARIF artifact
+    - name: Upload Grype artifact
       uses: actions/upload-artifact@v4
       with:
-        name: grype-scan-results
+        name: Grype Results
         path: grype.sarif
 
-    - name: Upload Syft+Grype results to GitHub Security Tab
+    - name: Upload Grype results to GitHub Security Tab
       uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: grype.sarif
-        category: grype
+        category: Grype
     
     # ========== 3. DOCKER SCOUT ==========
     - name: Scan with Docker Scout
@@ -95,18 +95,19 @@ jobs:
         dockerhub-password: ${{ secrets.DOCKER_TOKEN }}
         sarif-file: scout.sarif
         summary: true
+        write-comment: false
     
-    - name: Upload Docker Scout SARIF artifact
+    - name: Upload Docker Scout artifact
       uses: actions/upload-artifact@v4
       with:
-        name: scout-results
+        name: Docker Scout Results
         path: scout.sarif
     
     - name: Upload Docker Scout results to Security Tab
       uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: scout.sarif
-        category: docker-scout
+        category: Docker Scout
 
     # ========== 4. SNYK ==========
     - name: Scan with Snyk
@@ -122,10 +123,10 @@ jobs:
       run: |
         sed 's/null/0.0/g' snyk.raw.sarif > snyk.sarif
 
-    - name: Upload Snyk SARIF artifact
+    - name: Upload Snyk artifact
       uses: actions/upload-artifact@v4
       with:
-        name: snyk-results
+        name: Snyk Results
         path: snyk.sarif
 
     - name: Upload Snyk results to GitHub Security Tab
