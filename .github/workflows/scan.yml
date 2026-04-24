@@ -120,13 +120,15 @@ jobs:
 
     - name: Fix Snyk SARIF
       run: |
-        sed 's/"security-severity": null/"security-severity": 0.0/g' snyk.raw.sarif > snyk.sarif
-
-    - name: Upload Snyk SARIF artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: snyk-results
-        path: snyk.sarif
+        sudo apt-get install -y jq
+        
+        jq '.runs[].tool.driver.rules |= map(
+          if .properties."security-severity" == null then 
+            .properties."security-severity" = 0.0 
+          else 
+            . 
+          end
+        )' snyk.raw.sarif > snyk.sarif
 
     - name: Upload Snyk results to GitHub Security Tab
       uses: github/codeql-action/upload-sarif@v4
