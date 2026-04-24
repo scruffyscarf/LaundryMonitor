@@ -1,4 +1,4 @@
-FROM python:3.11-alpine
+FROM python:3.14-alpine
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -12,12 +12,14 @@ RUN apk update && \
         musl-dev \
         sqlite-dev \
         linux-headers \
-        --no-cache bash
+        bash
 
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
+
+RUN apk del gcc musl-dev linux-headers
 
 COPY backend/ ./backend/
 COPY frontend/ ./frontend/
