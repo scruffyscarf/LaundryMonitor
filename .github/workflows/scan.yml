@@ -57,7 +57,7 @@ jobs:
       uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: trivy.sarif
-        category: Trivy
+        category: trivy
     
     # ========== 2. SYFT + GRYPE ==========
     - name: Install Syft and Grype
@@ -83,7 +83,7 @@ jobs:
       uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: grype.sarif
-        category: Grype
+        category: grype
     
     # ========== 3. DOCKER SCOUT ==========
     - name: Scan with Docker Scout
@@ -107,7 +107,7 @@ jobs:
       uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: scout.sarif
-        category: Docker Scout
+        category: docker-scout
 
     # ========== 4. SNYK ==========
     - name: Scan with Snyk
@@ -133,4 +133,4 @@ jobs:
       uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: snyk.sarif
-        category: Snyk
+        category: snyk
