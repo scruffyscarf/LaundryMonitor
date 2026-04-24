@@ -110,16 +110,10 @@ jobs:
       uses: snyk/actions/docker@master
       with:
         image: laundry-monitor:latest
-        args: --json-file-output=snyk.json
+        args: --sarif-file-output=snyk.sarif
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       continue-on-error: true
-
-    - name: Convert Snyk JSON to SARIF
-      uses: garethr/snyk-to-sarif@master
-      with:
-        input: snyk.json
-        output: snyk.sarif
 
     - name: Upload Snyk SARIF artifact
       uses: actions/upload-artifact@v4
