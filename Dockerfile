@@ -7,6 +7,7 @@ WORKDIR /app
 
 RUN apk update && \
     apk upgrade && \
+    apk upgrade xz && \
     apk add --no-cache \
         gcc \
         musl-dev \
@@ -16,8 +17,8 @@ RUN apk update && \
 
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+RUN python -m pip install --no-cache-dir --upgrade pip==26.1 && \
+    python -m pip install --no-cache-dir -r requirements.txt
 
 RUN apk del gcc musl-dev linux-headers
 
